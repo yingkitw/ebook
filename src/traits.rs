@@ -1,6 +1,20 @@
 use crate::{Metadata, Result};
 use std::path::Path;
 use std::io::{Read, Write};
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::SystemTime;
+
+static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+fn unique_temp_file(name: &str) -> PathBuf {
+    let nanos = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    let c = TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
+    std::env::temp_dir().join(format!("{name}_{}_{}_{}.tmp", std::process::id(), nanos, c))
+}
 
 pub trait EbookReader {
     fn read_from_file(&mut self, path: &Path) -> Result<()>;
@@ -17,7 +31,7 @@ pub trait EbookReader {
     /// Read ebook from bytes (helper for streaming)
     fn read_from_bytes(&mut self, data: &[u8]) -> Result<()> {
         // Default implementation creates a temporary file
-        let temp_file = std::env::temp_dir().join("ebook_temp_read.tmp");
+        let temp_file = unique_temp_file("ebook_temp_read");
         {
             let mut file = std::fs::File::create(&temp_file)?;
             file.write_all(data)?;
@@ -57,7 +71,7 @@ pub trait EbookWriter {
     fn write_to_writer_internal<W: Write>(&self, writer: &mut W) -> Result<()> {
         // Default implementation: create temp file and copy it
         use std::io::Read;
-        let temp_file = std::env::temp_dir().join("ebook_temp_write.tmp");
+        let temp_file = unique_temp_file("ebook_temp_write");
         self.write_to_file(&temp_file)?;
         let mut file = std::fs::File::open(&temp_file)?;
         let mut buffer = Vec::new();

@@ -59,6 +59,8 @@
 - [x] **Streaming support for large files (TXT 10MB+, EPUB 50MB+ thresholds)**
 - [x] **8 comprehensive streaming tests (all passing)**
 - [x] **Improved error messages with hints using thiserror**
+- [x] **Trait streaming helper tests (read_from_bytes/read_from_reader/write_to_writer) including concurrency safety (4 tests)**
+- [x] **Error message hint tests for EbookError (5 tests)**
 - [x] **Modern Rust formatting and code quality improvements**
 
 ## In Progress 🚧
@@ -86,7 +88,7 @@
 - [x] Add benchmarks for performance testing (6 benchmarks with criterion)
 - [x] Add logging support (env_logger with configurable log levels)
 - [x] Improve error messages with suggestions (thiserror with hints)
-- [x] All tests passing (Currently: 92 tests - 13 unit + 8 AZW + 5 CBZ metadata + 7 CLI optimize + 13 CLI + 11 conversion + 7 EPUB + 6 EPUB3 + 6 image optimization + 6 MOBI + 6 PDF + 8 streaming + 6 TXT)
+- [x] All tests passing (Currently: 101 tests - 13 unit + 8 AZW + 5 CBZ metadata + 7 CLI optimize + 13 CLI + 11 conversion + 7 EPUB + 6 EPUB3 + 6 image optimization + 6 MOBI + 6 PDF + 8 streaming + 6 TXT + 4 trait streaming + 5 error hints)
 - [ ] Create CI/CD pipeline
 
 ### Documentation

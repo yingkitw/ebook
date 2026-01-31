@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2024"
 authors = ["Ying Kit WONG"]
 description = "A CLI tool for reading, writing, and operating on various ebook formats"
+documentation = "https://docs.rs/ebook"
+homepage = "https://github.com/yingkitw/ebook"
+repository = "https://github.com/yingkitw/ebook"
 
 [lib]
 name = "ebook_cli"
