@@ -1,5 +1,5 @@
 use crate::mcp::types::*;
-use crate::formats::{EpubHandler, CbzHandler, TxtHandler, PdfHandler};
+use crate::formats::{AzwHandler, CbzHandler, EpubHandler, Fb2Handler, MobiHandler, PdfHandler, TxtHandler};
 use crate::traits::{EbookReader, EbookWriter, EbookOperator};
 use crate::{Metadata, Converter};
 use serde_json::json;
@@ -102,7 +102,7 @@ impl McpServer {
         let tools = vec![
             Tool {
                 name: "read_ebook".to_string(),
-                description: "Read an ebook file and extract its content and metadata".to_string(),
+                description: "Read an ebook file and extract content/metadata/TOC (supports: epub, pdf, txt, mobi, fb2, azw, cbz)".to_string(),
                 input_schema: json!({
                     "type": "object",
                     "properties": {
@@ -126,7 +126,7 @@ impl McpServer {
             },
             Tool {
                 name: "write_ebook".to_string(),
-                description: "Create a new ebook file with specified content and metadata".to_string(),
+                description: "Create a new ebook file from text content (supports: epub, pdf, txt, mobi, fb2, azw)".to_string(),
                 input_schema: json!({
                     "type": "object",
                     "properties": {
@@ -136,8 +136,8 @@ impl McpServer {
                         },
                         "format": {
                             "type": "string",
-                            "description": "Format of the ebook (epub, mobi, fb2, cbz, txt, pdf)",
-                            "enum": ["epub", "mobi", "fb2", "cbz", "txt", "pdf"]
+                            "description": "Format of the ebook (epub, mobi, fb2, azw, txt, pdf)",
+                            "enum": ["epub", "mobi", "fb2", "azw", "txt", "pdf"]
                         },
                         "title": {
                             "type": "string",
@@ -171,7 +171,7 @@ impl McpServer {
             },
             Tool {
                 name: "validate_ebook".to_string(),
-                description: "Validate an ebook file structure and metadata".to_string(),
+                description: "Validate an ebook file structure and metadata (supports: epub, pdf, txt, mobi, fb2, azw, cbz)".to_string(),
                 input_schema: json!({
                     "type": "object",
                     "properties": {
@@ -185,7 +185,7 @@ impl McpServer {
             },
             Tool {
                 name: "get_ebook_info".to_string(),
-                description: "Get detailed information about an ebook file".to_string(),
+                description: "Get detailed information about an ebook file (supports: epub, pdf, txt, mobi, fb2, azw, cbz)".to_string(),
                 input_schema: json!({
                     "type": "object",
                     "properties": {
@@ -213,7 +213,7 @@ impl McpServer {
                         },
                         "target_format": {
                             "type": "string",
-                            "description": "Target format (epub, mobi, fb2, pdf, txt)",
+                            "description": "Target format (Converter supports: epub, mobi, fb2, pdf, txt)",
                             "enum": ["epub", "mobi", "fb2", "pdf", "txt"]
                         }
                     },
@@ -379,6 +379,30 @@ impl McpServer {
                         .map_err(|e| format!("Failed to get content: {e}"))?
                 }
             }
+            "cbz" => {
+                let mut handler = CbzHandler::new();
+                handler.read_from_file(&path_buf)
+                    .map_err(|e| format!("Failed to read CBZ: {e}"))?;
+
+                if extract_metadata {
+                    let metadata = handler.get_metadata()
+                        .map_err(|e| format!("Failed to get metadata: {e}"))?;
+                    serde_json::to_string_pretty(&metadata).unwrap()
+                } else if extract_toc {
+                    let toc = handler.get_toc()
+                        .map_err(|e| format!("Failed to get TOC: {e}"))?;
+                    format!(
+                        "Table of Contents:\n{}",
+                        toc.iter()
+                            .map(|e| format!("{}{}", "  ".repeat(e.level.saturating_sub(1)), e.title))
+                            .collect::<Vec<_>>()
+                            .join("\n")
+                    )
+                } else {
+                    handler.get_content()
+                        .map_err(|e| format!("Failed to get content: {e}"))?
+                }
+            }
             "txt" => {
                 let mut handler = TxtHandler::new();
                 handler.read_from_file(&path_buf)
@@ -407,6 +431,78 @@ impl McpServer {
                     let metadata = handler.get_metadata()
                         .map_err(|e| format!("Failed to get metadata: {e}"))?;
                     serde_json::to_string_pretty(&metadata).unwrap()
+                } else {
+                    handler.get_content()
+                        .map_err(|e| format!("Failed to get content: {e}"))?
+                }
+            }
+            "mobi" => {
+                let mut handler = MobiHandler::new();
+                handler.read_from_file(&path_buf)
+                    .map_err(|e| format!("Failed to read MOBI: {e}"))?;
+
+                if extract_metadata {
+                    let metadata = handler.get_metadata()
+                        .map_err(|e| format!("Failed to get metadata: {e}"))?;
+                    serde_json::to_string_pretty(&metadata).unwrap()
+                } else if extract_toc {
+                    let toc = handler.get_toc()
+                        .map_err(|e| format!("Failed to get TOC: {e}"))?;
+                    format!(
+                        "Table of Contents:\n{}",
+                        toc.iter()
+                            .map(|e| format!("{}{}", "  ".repeat(e.level.saturating_sub(1)), e.title))
+                            .collect::<Vec<_>>()
+                            .join("\n")
+                    )
+                } else {
+                    handler.get_content()
+                        .map_err(|e| format!("Failed to get content: {e}"))?
+                }
+            }
+            "azw" => {
+                let mut handler = AzwHandler::new();
+                handler.read_from_file(&path_buf)
+                    .map_err(|e| format!("Failed to read AZW: {e}"))?;
+
+                if extract_metadata {
+                    let metadata = handler.get_metadata()
+                        .map_err(|e| format!("Failed to get metadata: {e}"))?;
+                    serde_json::to_string_pretty(&metadata).unwrap()
+                } else if extract_toc {
+                    let toc = handler.get_toc()
+                        .map_err(|e| format!("Failed to get TOC: {e}"))?;
+                    format!(
+                        "Table of Contents:\n{}",
+                        toc.iter()
+                            .map(|e| format!("{}{}", "  ".repeat(e.level.saturating_sub(1)), e.title))
+                            .collect::<Vec<_>>()
+                            .join("\n")
+                    )
+                } else {
+                    handler.get_content()
+                        .map_err(|e| format!("Failed to get content: {e}"))?
+                }
+            }
+            "fb2" => {
+                let mut handler = Fb2Handler::new();
+                handler.read_from_file(&path_buf)
+                    .map_err(|e| format!("Failed to read FB2: {e}"))?;
+
+                if extract_metadata {
+                    let metadata = handler.get_metadata()
+                        .map_err(|e| format!("Failed to get metadata: {e}"))?;
+                    serde_json::to_string_pretty(&metadata).unwrap()
+                } else if extract_toc {
+                    let toc = handler.get_toc()
+                        .map_err(|e| format!("Failed to get TOC: {e}"))?;
+                    format!(
+                        "Table of Contents:\n{}",
+                        toc.iter()
+                            .map(|e| format!("{}{}", "  ".repeat(e.level.saturating_sub(1)), e.title))
+                            .collect::<Vec<_>>()
+                            .join("\n")
+                    )
                 } else {
                     handler.get_content()
                         .map_err(|e| format!("Failed to get content: {e}"))?
@@ -467,6 +563,33 @@ impl McpServer {
             }
             "pdf" => {
                 let mut handler = PdfHandler::new();
+                handler.set_metadata(metadata)
+                    .map_err(|e| format!("Failed to set metadata: {e}"))?;
+                handler.set_content(content)
+                    .map_err(|e| format!("Failed to set content: {e}"))?;
+                handler.write_to_file(&path_buf)
+                    .map_err(|e| format!("Failed to write file: {e}"))?;
+            }
+            "mobi" => {
+                let mut handler = MobiHandler::new();
+                handler.set_metadata(metadata)
+                    .map_err(|e| format!("Failed to set metadata: {e}"))?;
+                handler.set_content(content)
+                    .map_err(|e| format!("Failed to set content: {e}"))?;
+                handler.write_to_file(&path_buf)
+                    .map_err(|e| format!("Failed to write file: {e}"))?;
+            }
+            "azw" => {
+                let mut handler = AzwHandler::new();
+                handler.set_metadata(metadata)
+                    .map_err(|e| format!("Failed to set metadata: {e}"))?;
+                handler.set_content(content)
+                    .map_err(|e| format!("Failed to set content: {e}"))?;
+                handler.write_to_file(&path_buf)
+                    .map_err(|e| format!("Failed to write file: {e}"))?;
+            }
+            "fb2" => {
+                let mut handler = Fb2Handler::new();
                 handler.set_metadata(metadata)
                     .map_err(|e| format!("Failed to set metadata: {e}"))?;
                 handler.set_content(content)
@@ -559,6 +682,41 @@ impl McpServer {
                 handler.validate()
                     .map_err(|e| format!("Failed to validate: {e}"))?
             }
+            "pdf" => {
+                let mut handler = PdfHandler::new();
+                handler.read_from_file(&path_buf)
+                    .map_err(|e| format!("Failed to read PDF: {e}"))?;
+                handler.validate()
+                    .map_err(|e| format!("Failed to validate: {e}"))?
+            }
+            "mobi" => {
+                let mut handler = MobiHandler::new();
+                handler.read_from_file(&path_buf)
+                    .map_err(|e| format!("Failed to read MOBI: {e}"))?;
+                handler.validate()
+                    .map_err(|e| format!("Failed to validate: {e}"))?
+            }
+            "azw" => {
+                let mut handler = AzwHandler::new();
+                handler.read_from_file(&path_buf)
+                    .map_err(|e| format!("Failed to read AZW: {e}"))?;
+                handler.validate()
+                    .map_err(|e| format!("Failed to validate: {e}"))?
+            }
+            "fb2" => {
+                let mut handler = Fb2Handler::new();
+                handler.read_from_file(&path_buf)
+                    .map_err(|e| format!("Failed to read FB2: {e}"))?;
+                handler.validate()
+                    .map_err(|e| format!("Failed to validate: {e}"))?
+            }
+            "cbz" => {
+                let mut handler = CbzHandler::new();
+                handler.read_from_file(&path_buf)
+                    .map_err(|e| format!("Failed to read CBZ: {e}"))?;
+                handler.validate()
+                    .map_err(|e| format!("Failed to validate: {e}"))?
+            }
             _ => return Err(format!("Validation not supported for format: {format}")),
         };
 
@@ -604,6 +762,56 @@ impl McpServer {
                 let mut handler = EpubHandler::new();
                 handler.read_from_file(&path_buf)
                     .map_err(|e| format!("Failed to read EPUB: {e}"))?;
+                let metadata = handler.get_metadata()
+                    .map_err(|e| format!("Failed to get metadata: {e}"))?;
+                
+                format!("File: {}\nFormat: {}\nMetadata:\n{}",
+                    path, format, serde_json::to_string_pretty(&metadata).unwrap())
+            }
+            "pdf" => {
+                let mut handler = PdfHandler::new();
+                handler.read_from_file(&path_buf)
+                    .map_err(|e| format!("Failed to read PDF: {e}"))?;
+                let metadata = handler.get_metadata()
+                    .map_err(|e| format!("Failed to get metadata: {e}"))?;
+                
+                format!("File: {}\nFormat: {}\nMetadata:\n{}",
+                    path, format, serde_json::to_string_pretty(&metadata).unwrap())
+            }
+            "mobi" => {
+                let mut handler = MobiHandler::new();
+                handler.read_from_file(&path_buf)
+                    .map_err(|e| format!("Failed to read MOBI: {e}"))?;
+                let metadata = handler.get_metadata()
+                    .map_err(|e| format!("Failed to get metadata: {e}"))?;
+                
+                format!("File: {}\nFormat: {}\nMetadata:\n{}",
+                    path, format, serde_json::to_string_pretty(&metadata).unwrap())
+            }
+            "azw" => {
+                let mut handler = AzwHandler::new();
+                handler.read_from_file(&path_buf)
+                    .map_err(|e| format!("Failed to read AZW: {e}"))?;
+                let metadata = handler.get_metadata()
+                    .map_err(|e| format!("Failed to get metadata: {e}"))?;
+                
+                format!("File: {}\nFormat: {}\nMetadata:\n{}",
+                    path, format, serde_json::to_string_pretty(&metadata).unwrap())
+            }
+            "fb2" => {
+                let mut handler = Fb2Handler::new();
+                handler.read_from_file(&path_buf)
+                    .map_err(|e| format!("Failed to read FB2: {e}"))?;
+                let metadata = handler.get_metadata()
+                    .map_err(|e| format!("Failed to get metadata: {e}"))?;
+                
+                format!("File: {}\nFormat: {}\nMetadata:\n{}",
+                    path, format, serde_json::to_string_pretty(&metadata).unwrap())
+            }
+            "cbz" => {
+                let mut handler = CbzHandler::new();
+                handler.read_from_file(&path_buf)
+                    .map_err(|e| format!("Failed to read CBZ: {e}"))?;
                 let metadata = handler.get_metadata()
                     .map_err(|e| format!("Failed to get metadata: {e}"))?;
                 
