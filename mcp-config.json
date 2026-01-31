@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "ebook": {
+      "command": "/Users/yingkitw/Desktop/myproject/ebook/target/release/ebook",
+      "args": ["mcp"],
+      "env": {}
+    }
+  }
+}
