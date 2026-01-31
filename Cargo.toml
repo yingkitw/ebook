@@ -7,6 +7,7 @@ description = "A CLI tool for reading, writing, and operating on various ebook f
 documentation = "https://docs.rs/ebook"
 homepage = "https://github.com/yingkitw/ebook"
 repository = "https://github.com/yingkitw/ebook"
+license = "Apache-2.0"
 
 [lib]
 name = "ebook_cli"
